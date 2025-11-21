@@ -9,6 +9,7 @@ import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.FlxState;
 import flixel.addons.text.FlxTypeText;
+import flixel.addons.ui.FlxButtonPlus;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
@@ -33,6 +34,7 @@ class PlayState extends FlxState
 	
 	public function new() {
 		sprites = [];
+		curChoices = [];
 		super();
 	}
 
@@ -54,6 +56,7 @@ class PlayState extends FlxState
 		
 		dialogueText.completeCallback = () -> {
 			typingDone = true;
+			showChoices();
 		}
 
 		nameText.color = dialogueText.color = FlxColor.BLUE;
@@ -64,17 +67,21 @@ class PlayState extends FlxState
 		runDialogue();
 	}
 
+	var selectingChoices:Bool = false;
+
 	override public function update(elapsed:Float)
 	{
 
 		if (FlxG.keys.justPressed.ENTER) {
 			if (!typingDone) {
 				skipDialogue();
-			} else if (typingDone && curIndex < dialogue.length - 1) {
+			}
+			else if (!selectingChoices && typingDone && curIndex < dialogue.length - 1)
+			{
 				curIndex++;
-				curChoices = [];
 				curDialogue = dialogue[curIndex];
 				runDialogue();
+				trace('aaaa', curIndex);
 			}
 		}
 		super.update(elapsed);
@@ -91,7 +98,7 @@ class PlayState extends FlxState
 	inline function skipDialogue() {
 		dialogueText.skip();
 		typingDone = true;
-		curChoices = [];
+		showChoices();
 	} 
 
 	inline function manageEvents(dialogue:DialogueBlock) {
@@ -140,8 +147,48 @@ class PlayState extends FlxState
 					text: args[0],
 					branch: args[1]
 				});
+				trace('choice pushed');
 			default:
 				trace('Invalid event ${name}(${args})');
+		}
+	}
+
+	var choices:Array<FlxButtonPlus> = [];
+
+	function showChoices()
+	{
+		trace('a');
+		trace(curChoices);
+		if (curChoices.length == 0)
+			return;
+
+		selectingChoices = true;
+
+		trace('b');
+		for (i in 0...curChoices.length)
+		{
+			trace('c', i);
+			var choice = curChoices[i];
+			var choiceButton:FlxButtonPlus;
+			choiceButton = new FlxButtonPlus(i * 100 + 20, 0, () -> {}, choice.text);
+			choiceButton.onClickCallback = () ->
+			{
+				curIndex = 0;
+				trace(choice.branch);
+				dialogue = branches[choice.branch];
+				curDialogue = dialogue[curIndex];
+				for (c in choices)
+				{
+					c.kill();
+					spriteGroup.remove(choiceButton);
+				}
+				selectingChoices = false;
+				curChoices = [];
+				choices = [];
+				runDialogue();
+			}
+			choices.push(choiceButton);
+			spriteGroup.add(choiceButton);
 		}
 	}
 
